@@ -1,0 +1,604 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Growth Scenario Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: lab bar, verdict band, decision console (left) + simulation views (right), risk & comparison, agent rail */
+:root{
+  --bg:#eef2f4; --surface:#ffffff; --surface-2:#e4eaee; --line:#cfd9df; --fg:#0e1a22; --muted:#55666f;
+  --accent:#0b6e8a; --accent-soft:#d3ebf2; --gold:#b98000; --ink2:#5b4bc4;
+  --crit:#c4362b; --warn:#b3730c; --good:#2a8a52;
+  --c1:#0b6e8a; --c2:#b98000; --c3:#5b4bc4; --c4:#b23a6c; --c5:#2f8f6e; --c6:#8796a0;
+  --display:"Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"Source Code Pro", ui-monospace, Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1216; --surface:#11191e; --surface-2:#18242b; --line:#24343d; --fg:#e1eaee; --muted:#8ea0a9;
+  --accent:#43b8d6; --accent-soft:#0f3540; --gold:#e8b53c; --ink2:#9d91f5;
+  --crit:#f26b5c; --warn:#e9b04a; --good:#5ec486;
+  --c1:#43b8d6; --c2:#e8b53c; --c3:#9d91f5; --c4:#ee7aa8; --c5:#5ccfa4; --c6:#6c7d86;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1216; --surface:#11191e; --surface-2:#18242b; --line:#24343d; --fg:#e1eaee; --muted:#8ea0a9;
+  --accent:#43b8d6; --accent-soft:#0f3540; --gold:#e8b53c; --ink2:#9d91f5;
+  --crit:#f26b5c; --warn:#e9b04a; --good:#5ec486;
+  --c1:#43b8d6; --c2:#e8b53c; --c3:#9d91f5; --c4:#ee7aa8; --c5:#5ccfa4; --c6:#6c7d86;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14.5px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;font-weight:700;letter-spacing:-.01em}
+.num,td.n,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand h1{font-size:21px}
+.brand small{display:block;color:var(--muted);font-size:12.5px;font-family:var(--body)}
+.hz{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.hz b{font-family:var(--mono);color:var(--fg);font-weight:500}
+
+.page{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1680px;margin:0 auto}
+@media (max-width:1180px){.page{grid-template-columns:minmax(0,1fr)}}
+main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.panel-h h3{font-size:17px}
+.panel-h p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:72ch}
+.eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.grid2e{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.grid2e{grid-template-columns:minmax(0,1fr)}}
+
+.brief{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:14px}
+.brief h2{font-size:clamp(21px,2.5vw,28px);max-width:40ch}
+.brief .prob{color:var(--muted);max-width:82ch;margin:6px 0 0}
+.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.pipe button{all:unset;cursor:pointer;padding:12px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;min-width:0}
+.pipe button:last-child{border-right:0}
+.pipe button:hover{background:var(--surface-2)}
+.pipe button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pipe .st{font-size:11px;font-family:var(--mono);color:var(--gold)}
+.pipe b{font-family:var(--display);font-size:16px}
+.pipe .d{color:var(--muted);font-size:12.5px}
+.pipe .v{font-family:var(--mono);font-size:12px}
+@media (max-width:700px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.pipe button:nth-child(2){border-right:0}.pipe button:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+/* verdict */
+.verdict{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;border-left:6px solid var(--vc)}
+@media (max-width:760px){.verdict{grid-template-columns:minmax(0,1fr)}}
+.verdict .tag{font-family:var(--display);font-size:28px;font-weight:700;color:var(--vc);line-height:1}
+.verdict .tag small{display:block;font-size:12px;font-family:var(--body);color:var(--muted);font-weight:600;margin-top:6px;text-transform:uppercase;letter-spacing:.08em}
+.verdict p{margin:0;font-size:14px}
+.verdict .gauge{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.verdict .gauge b{font-family:var(--display);font-size:30px}
+.verdict .gauge span{font-size:12px;color:var(--muted)}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media (max-width:1300px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-family:var(--display);font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .s{font-size:12px;color:var(--muted)}
+.up-bad{color:var(--crit)} .up-good{color:var(--good)} .warn{color:var(--warn)}
+
+/* console */
+.lab{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:1100px){.lab{grid-template-columns:minmax(0,1fr)}}
+.console{display:flex;flex-direction:column;gap:14px}
+.grp{display:flex;flex-direction:column;gap:8px}
+.grp>.eyebrow{display:flex;justify-content:space-between}
+.ctl{background:var(--surface-2);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.ctl label,.ctl .lb{font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ctl label b{font-family:var(--mono);font-weight:500;color:var(--accent)}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl span.h{font-size:11.5px;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:6px 8px;font-size:12.5px;font-weight:600;text-align:left}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.sw{position:relative;width:38px;height:22px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%}
+.sw span{position:absolute;inset:0;border-radius:11px;background:var(--line);transition:background .2s;pointer-events:none}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:transform .2s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::after{transform:translateX(16px)}
+.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:700;font-size:13px}
+.btn:hover{background:var(--surface-2)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--surface)}
+.btn:disabled{opacity:.6;cursor:wait}
+.note{font-size:12px;color:var(--muted)}
+
+.chartbox{position:relative;height:280px}
+.chartbox.sm{height:230px}
+.insight{margin-top:10px;font-size:13.5px;padding:9px 12px;border-radius:0;background:var(--surface-2);border-left:3px solid var(--gold)}
+.hm{overflow-x:auto;margin-top:14px}
+.hm table{border-collapse:separate;border-spacing:3px;width:100%;min-width:620px}
+.hm th{font-size:11px;color:var(--muted);font-weight:700;padding:2px 4px;text-align:center;white-space:nowrap}
+.hm th.rl{text-align:left}
+.hm td{text-align:center;font-family:var(--mono);font-size:11px;padding:6px 3px;border-radius:4px;font-variant-numeric:tabular-nums;position:relative}
+.hm td.bind{outline:2px solid var(--crit);outline-offset:-2px;font-weight:600}
+
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+table.t{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+table.t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:9px 10px;background:var(--surface-2)}
+table.t td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle}
+table.t tr.cur td{background:color-mix(in oklab,var(--accent) 9%,var(--surface))}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;background:color-mix(in oklab,var(--pc) 15%,var(--surface));color:var(--pc)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pc)}
+.chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:6px;background:var(--surface-2);white-space:nowrap}
+.risk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.risk div{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.risk span{display:block;font-size:11.5px;color:var(--muted)}
+.risk b{font-family:var(--display);font-size:19px}
+
+/* agent */
+.agent{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);height:calc(100vh - 96px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-width:0}
+@media (max-width:1180px){.agent{position:relative;top:0;height:640px}}
+.agent-h{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.agent-h .t{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.agent-h h3{font-size:18px;display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in oklab,var(--good) 25%,transparent)}
+.engine{all:unset;cursor:pointer;font-size:11.5px;font-family:var(--mono);padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.engine b{color:var(--accent);font-weight:500}
+.engine:focus-visible{outline:2px solid var(--accent)}
+.ctx{font-size:12.5px;color:var(--muted)}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.msg{font-size:14px;min-width:0}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--surface);padding:8px 12px;border-radius:12px 12px 3px 12px;max-width:88%}
+.msg.a .body{background:var(--surface-2);padding:10px 12px;border-radius:3px 12px 12px 12px;overflow-wrap:anywhere}
+.msg.a .body p{margin:0 0 7px}.msg.a .body p:last-child{margin:0}
+.msg.a .body ul,.msg.a .body ol{margin:4px 0 8px;padding-left:18px}
+.msg.a .body h4{margin:6px 0 4px;font-size:15.5px}
+.msg.a .body code{font-family:var(--mono);font-size:12px;background:var(--surface);padding:1px 4px;border-radius:4px}
+.msg.a .body table{border-collapse:collapse;font-size:12px;margin:6px 0;display:block;overflow-x:auto}
+.msg.a .body td,.msg.a .body th{border:1px solid var(--line);padding:3px 6px;text-align:left}
+.trace{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.trace span{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.trace span::before{content:"▸ ";color:var(--gold)}
+.thinking{color:var(--muted);font-style:italic}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line)}
+.sugg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px;text-align:left}
+.sugg button:hover{background:var(--surface-2);border-color:var(--accent)}
+.composer{display:flex;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;height:42px;min-width:0}
+.fab{display:none;position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:8;border:0;background:var(--accent);color:var(--surface);padding:11px 16px;border-radius:999px;font-weight:700;box-shadow:0 6px 18px rgb(0 0 0 / .2)}
+@media (max-width:1180px){.fab{display:block}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="var(--accent)"/><path d="M7 25l6-7 5 4 9-11" fill="none" stroke="var(--surface)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 25l6-4 5 2 9-6" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 3"/></svg>
+    <div><h1>Growth Scenario Lab</h1><small>AI what-if simulator · home appliances maker, Hyderabad plant · assumed data</small></div>
+  </div>
+  <div class="hz">Plan horizon <b>Nov 2026 – Oct 2027</b> · 12 monthly periods · 3 product families</div>
+</div></header>
+
+<div class="page">
+<main>
+  <section class="brief">
+    <div>
+      <div class="eyebrow">Problem 14 · What-if business simulator</div>
+      <h2>Can the company grow sales 20%, and what breaks first if it tries?</h2>
+      <p class="prob">The agent runs a month-by-month model of the whole business: demand by product and season, how the growth is won (price, marketing or new channels), plant and shift capacity, operators and overtime, installation technicians, motor supply, warehouse and transport capacity, and working capital. It shows where the plan breaks, what fixing it costs, the cheapest combination of decisions to hit the target, and how likely that is given demand uncertainty.</p>
+    </div>
+    <div class="pipe" id="pipe"></div>
+  </section>
+
+  <div class="verdict" id="verdict"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="lab" id="s-lab">
+    <div class="panel console" id="console">
+      <div class="panel-h" style="margin:0"><div><h3>Decision console</h3><p>Every change re-runs the 12-month simulation</p></div></div>
+      <div class="presets" id="presets"></div>
+      <div class="grp"><div class="eyebrow">Growth</div>
+        <div class="ctl"><label for="g">Sales growth target <b id="gV"></b></label><input type="range" id="g" min="0" max="40" step="1" value="20"><span class="h">vs last 12 months' unit demand</span></div>
+        <div class="ctl"><span class="lb">How we grow</span><div class="seg" id="strat"></div><span class="h" id="stratH"></span></div>
+      </div>
+      <div class="grp"><div class="eyebrow">Production capacity</div>
+        <div class="ctl"><label for="shift">Add a third shift from Dec <span class="sw"><input type="checkbox" id="shift"><span></span></span></label><span class="h">+24k std units/mo machine capacity; needs operators</span></div>
+        <div class="ctl"><label for="line">New assembly line, ₹22 Cr capex <span class="sw"><input type="checkbox" id="line"><span></span></span></label><span class="h">+18k std units/mo from Jun 2027 (7-month lead)</span></div>
+        <div class="ctl"><label for="cm">Contract manufacturing <b id="cmV"></b></label><input type="range" id="cm" min="0" max="15" step="1" value="0"><span class="h">k std units/mo at +11% unit cost</span></div>
+      </div>
+      <div class="grp"><div class="eyebrow">People</div>
+        <div class="ctl"><label for="ops">Hire operators <b id="opsV"></b></label><input type="range" id="ops" min="0" max="200" step="10" value="0"><span class="h">Join in Jan, fully productive from Feb</span></div>
+        <div class="ctl"><label for="tech">Hire installation technicians <b id="techV"></b></label><input type="range" id="tech" min="0" max="80" step="5" value="0"><span class="h">Each installs 140 washing machines a month</span></div>
+      </div>
+      <div class="grp"><div class="eyebrow">Supply, logistics &amp; stock</div>
+        <div class="ctl"><label for="ss2">Qualify a second motor supplier <span class="sw"><input type="checkbox" id="ss2"><span></span></span></label><span class="h">+14k motors/mo from Mar; ₹1.2 Cr qualification</span></div>
+        <div class="ctl"><label for="tpl">3PL flex warehousing &amp; transport <span class="sw"><input type="checkbox" id="tpl"><span></span></span></label><span class="h">+25% dispatch, +15k storage; ₹265 vs ₹210 per unit</span></div>
+        <div class="ctl"><label for="pre">Seasonal pre-build <span class="sw"><input type="checkbox" id="pre"><span></span></span></label><span class="h">Build ahead of peaks within storage and working capital</span></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gold" id="optBtn">Let the agent optimise</button><button class="btn" id="pinBtn">Pin to comparison</button></div>
+      <div class="note" id="optNote"></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div class="panel" id="s-sim">
+        <div class="panel-h"><div><h3>Demand vs what the business can deliver</h3><p>Monthly demand against fulfilled sales, with plant capacity by source (thousand standard units)</p></div></div>
+        <div class="chartbox"><canvas id="cMain" aria-label="Demand and capacity by month"></canvas></div>
+        <div class="hm" id="hm"></div>
+        <div class="insight" id="bindInsight"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2e" id="s-fin">
+    <div class="panel">
+      <div class="panel-h"><div><h3>EBITDA bridge: baseline → scenario</h3><p>12-month EBITDA (₹ crore), from the no-growth plan to this scenario</p></div></div>
+      <div class="chartbox"><canvas id="cBridge" aria-label="EBITDA bridge"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>People &amp; working capital</h3><p>Operators needed vs on payroll, overtime %, and working capital tied up</p></div></div>
+      <div class="chartbox"><canvas id="cPeople" aria-label="Workforce and working capital"></canvas></div>
+      <div class="insight" id="peopleInsight"></div>
+    </div>
+  </div>
+
+  <div class="grid2e" id="s-risk">
+    <div class="panel">
+      <div class="panel-h"><div><h3>Risk: 300 demand futures</h3><p>Monte Carlo with ±9% demand uncertainty plus monthly noise. Distribution of growth actually delivered.</p></div><button class="btn" id="mcBtn">Re-run</button></div>
+      <div class="chartbox sm"><canvas id="cMC" aria-label="Monte Carlo distribution"></canvas></div>
+      <div class="risk" id="riskOut"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Scenario comparison</h3><p>Preset strategies at the current target, plus any scenarios you pin</p></div></div>
+      <div class="tbl"><table class="t"><thead><tr><th>Scenario</th><th>Growth</th><th>Service</th><th>EBITDA</th><th>Capex</th><th>Peak WC</th><th>Verdict</th></tr></thead><tbody id="cmpRows"></tbody></table></div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent" id="agent" aria-label="Scenario agent">
+  <div class="agent-h">
+    <div class="t"><h3><span class="dot" aria-hidden="true"></span>Strategy Agent</h3><button class="engine" id="engineBtn"></button></div>
+    <div class="ctx">Runs the simulator, sets decisions, optimises and stress-tests</div>
+  </div>
+  <div class="msgs" id="msgs" aria-live="polite"></div>
+  <div class="sugg" id="sugg"></div>
+  <form class="composer" id="composer"><textarea id="q" placeholder="Ask: can we grow 20%? what breaks? cheapest plan?" aria-label="Message the agent"></textarea><button class="btn pri" id="sendBtn" type="submit">Send</button></form>
+</aside>
+</div>
+<button class="fab" id="fab">Ask the agent</button>
+
+<script>
+(function(){
+"use strict";
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const gaussR=r=>{let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=(x,d=1)=>(x*100).toFixed(d)+"%";
+const cr=x=>"₹"+(x/1e7).toFixed(x>=1e9||x<=-1e9?0:1)+" Cr";
+const fmtK=x=>(x/1000).toFixed(1)+"k";
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function alpha(hex,a){hex=hex.replace("#","");if(hex.length===3)hex=hex.split("").map(c=>c+c).join("");const n=parseInt(hex,16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+const M=["Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"];
+
+/* ===================== ASSUMED COMPANY ===================== */
+const FAM=[
+ {k:"cool",n:"Air coolers",price:9500,su:1,motor:1,install:0,carry:0,base:[3,2,3,8,22,30,28,12,5,3,3,4]},
+ {k:"wm",n:"Washing machines",price:23000,su:2.4,motor:1,install:1,carry:.3,base:[14,10,9,9,10,10,10,11,12,13,16,18]},
+ {k:"kit",n:"Kitchen appliances",price:3800,su:.35,motor:0,install:0,carry:.2,base:[26,20,18,18,19,19,19,20,22,24,30,34]}
+].map(f=>({...f,base:f.base.map(x=>x*1000)}));
+const C={
+ machine2:62000,shift3:24000,line:18000,lineFrom:7,lineCapex:22e7,
+ opsNow:430,opsPerKSU:6.9,otMax:.15,opCost:28000,otPerSU:170,shiftPrem:.15,attr:.02,
+ techNow:130,techCap:140,techCost:32000,
+ motorCap:46000,motor2:14000,motor2From:4,motor2Cost:1.2e7,
+ dispatch:72000,storage:40000,tplDispatch:.25,tplStorage:15000,logCost:210,tplCost:265,
+ mat:.6,cmPrem:.11,overhead:85e7,mktBase:.04,wcLimit:40e7,rate:.105,
+ recvDays:45,payDays:60
+};
+const STRATS={
+ price:{n:"Price-led",h:"Cut prices; demand responds at once (elasticity −2.2). Margin takes the hit.",ramp:m=>1},
+ mkt:{n:"Marketing-led",h:"Extra brand and digital spend with diminishing returns; 2-month build-up.",ramp:m=>Math.min(1,(m+1)/3)},
+ channel:{n:"New channels",h:"Quick-commerce, e-commerce and 2 new states; fixed launch cost, 6-month ramp.",ramp:m=>Math.min(1,(m+1)/6)*1.15},
+ mix:{n:"Balanced mix",h:"One-third each; cheaper per point of growth than any single route.",ramp:m=>Math.min(1,(m+1)/3.5)}
+};
+// cost of winning the demand
+function growthCost(G,strat,incRev){
+  if(G<=0)return{priceCut:0,mkt:0,fixed:0,trade:0};
+  if(strat==="price")return{priceCut:G/2.2,mkt:0,fixed:0,trade:0};
+  if(strat==="mkt")return{priceCut:0,mkt:Math.pow(G*100,1.45)*.42e7,fixed:0,trade:0};
+  if(strat==="channel")return{priceCut:0,mkt:0,fixed:9e7,trade:.06*incRev};
+  return{priceCut:G/3/2.2,mkt:Math.pow(G/3*100,1.45)*.42e7,fixed:3e7,trade:.06*incRev/3};
+}
+
+/* ===================== SIMULATOR ===================== */
+const DEF={G:.2,strat:"mix",shift:false,line:false,cm:0,ops:0,tech:0,ss2:false,tpl:false,pre:false};
+function simulate(S,shock){
+  const months=[];let ops=C.opsNow;let inv=FAM.map(f=>f.base[0]*.35);let back=FAM.map(()=>0);let otRun=0;
+  const sh=shock||{common:1,m:Array(12).fill(1)};
+  const rmean=Array.from({length:12},(_,m)=>STRATS[S.strat].ramp(m)).reduce((a,b)=>a+b,0)/12;
+  const dem=FAM.map(f=>f.base.map((b,m)=>b*(1+S.G*STRATS[S.strat].ramp(m)/rmean)*sh.common*sh.m[m]));
+  const baseDem=FAM.map(f=>f.base);
+  // capacity per month (std units), before labour
+  const mach=m=>C.machine2+(S.shift&&m>=1?C.shift3:0)+(S.line&&m>=C.lineFrom?C.line:0);
+  const opsPlan=m=>{let o=C.opsNow;for(let i=0;i<=m;i++){o*=(1-C.attr);if(i===2)o+=S.ops*.5;if(i===3)o+=S.ops*.5}return o};
+  const capEst=m=>Math.min(mach(m),opsPlan(m)/C.opsPerKSU*1000*(1+C.otMax))+S.cm*1000;
+  const disp=m=>C.dispatch*(S.tpl?1+C.tplDispatch:1);
+  const store=C.storage+(S.tpl?C.tplStorage:0);
+  // pre-build plan: backward pass on std-unit need
+  const needSU=Array.from({length:12},(_,m)=>FAM.reduce((a,f,i)=>a+dem[i][m]*f.su,0));
+  const target=needSU.slice();
+  if(S.pre){let carry=0;for(let m=11;m>=0;m--){const cap=Math.min(capEst(m),disp(m)*1.05);const req=needSU[m]+carry;if(req>cap){carry=Math.min(req-cap,store);target[m]=cap}else{carry=0;target[m]=req}}
+    for(let m=0;m<12;m++){const cap=capEst(m);if(target[m]<cap&&m<11){const ahead=Math.max(0,target[m+1]-capEst(m+1));target[m]=Math.min(cap,target[m]+ahead)}}}
+  let tot={rev:0,revBase:0,cogs:0,labour:0,ot:0,tech:0,log:0,cmPrem:0,lost:0,lostRev:0,demand:0,sold:0,installBacklog:0,wcPeak:0,wcAvg:0,units:0};
+  for(let m=0;m<12;m++){
+    // labour
+    ops=ops*(1-(C.attr+(otRun>=2?.015:0)));if(m===2)ops+=S.ops*.5;if(m===3)ops+=S.ops*.5;
+    const labourCap=ops/C.opsPerKSU*1000;const machine=mach(m);
+    const plantCap=Math.min(machine,labourCap*(1+C.otMax));
+    // what to build: demand + backorders + safety stock − stock on hand
+    const famNeed=FAM.map((f,i)=>Math.max(0,dem[i][m]+back[i]+(m<11?dem[i][m+1]*.3:0)-inv[i]));
+    let needS=famNeed.reduce((a,n,i)=>a+n*FAM[i].su,0);
+    const goal=Math.max(needS,S.pre?target[m]:needS);
+    let inhouse=Math.min(plantCap,goal);let cm=Math.min(S.cm*1000,Math.max(0,goal-inhouse));let prodS=inhouse+cm;
+    // allocate to families (need-weighted; pre-build extra goes to next peak's mix)
+    const nextMix=FAM.map((f,i)=>dem[i][Math.min(11,m+2)]*f.su);const nmT=nextMix.reduce((a,b)=>a+b,0)||1;
+    let prod=FAM.map((f,i)=>{const base=Math.min(famNeed[i]*f.su,prodS*(famNeed[i]*f.su/Math.max(needS,1)));return base/f.su});
+    let used=prod.reduce((a,p,i)=>a+p*FAM[i].su,0);const extra=Math.max(0,prodS-used);prod=prod.map((p,i)=>p+extra*nextMix[i]/nmT/FAM[i].su);
+    // motor constraint
+    const motorCap=C.motorCap+(S.ss2&&m>=C.motor2From?C.motor2:0);const motors=prod.reduce((a,p,i)=>a+p*FAM[i].motor,0);
+    let motorShort=0;if(motors>motorCap){const r=motorCap/motors;motorShort=motors-motorCap;prod=prod.map((p,i)=>FAM[i].motor?p*r:p)}
+    prodS=prod.reduce((a,p,i)=>a+p*FAM[i].su,0);inhouse=Math.min(inhouse,prodS);cm=prodS-inhouse;
+    const otShare=Math.max(0,inhouse-labourCap)/Math.max(labourCap,1);otRun=otShare>.08?otRun+1:0;
+    // storage limit: excess build is not possible
+    inv=inv.map((v,i)=>v+prod[i]);
+    // sales: demand + backorders, limited by stock and dispatch capacity
+    const want=FAM.map((f,i)=>dem[i][m]+back[i]);let sell=want.map((w,i)=>Math.min(w,inv[i]));
+    const dispS=sell.reduce((a,s,i)=>a+s*FAM[i].su,0);const dcap=disp(m);let dispShort=0;if(dispS>dcap){const r=dcap/dispS;dispShort=dispS-dcap;sell=sell.map(s=>s*r)}
+    // installation capacity (washing machines)
+    const techs=C.techNow+(m>=1?S.tech:0);const instCap=techs*C.techCap;let instShort=0;const wmI=1;if(sell[wmI]>instCap){instShort=sell[wmI]-instCap;const cancel=instShort*.25;sell[wmI]-=cancel;tot.installBacklog+=instShort-cancel}
+    inv=inv.map((v,i)=>v-sell[i]);
+    const unmet=want.map((w,i)=>w-sell[i]);back=unmet.map((u,i)=>u*FAM[i].carry);const lost=unmet.map((u,i)=>u*(1-FAM[i].carry));
+    // storage overflow → forced slow-down (counted as cost of holding in 3PL at premium)
+    const stockS=inv.reduce((a,v,i)=>a+v*FAM[i].su,0);const overflow=Math.max(0,stockS-store);
+    // money
+    const gc=growthCost(S.G,S.strat,0);const pf=1-gc.priceCut;
+    const rev=sell.reduce((a,s,i)=>a+s*FAM[i].price*pf,0);const revB=FAM.reduce((a,f,i)=>a+baseDem[i][m]*f.price,0);
+    const cogs=prod.reduce((a,p,i)=>a+p*FAM[i].price*C.mat,0)*(1)+cm/Math.max(prodS,1)*prod.reduce((a,p,i)=>a+p*FAM[i].price*C.mat,0)*C.cmPrem;
+    const lab=ops*C.opCost*(S.shift&&m>=1?1+C.shiftPrem*.33:1)+Math.max(0,inhouse-labourCap)*C.otPerSU;
+    const techC=techs*C.techCost;
+    const shippedS=sell.reduce((a,s,i)=>a+s*FAM[i].su,0);const logC=Math.min(shippedS,C.dispatch)*C.logCost+Math.max(0,shippedS-C.dispatch)*C.tplCost+overflow*60;
+    const invVal=inv.reduce((a,v,i)=>a+v*FAM[i].price*C.mat,0);const wc=invVal+rev*C.recvDays/30*.7-cogs*C.payDays/30*.8;
+    tot.rev+=rev;tot.revBase+=revB;tot.cogs+=cogs;tot.labour+=lab;tot.tech+=techC;tot.log+=logC;tot.lost+=lost.reduce((a,b)=>a+b,0);tot.lostRev+=lost.reduce((a,l,i)=>a+l*FAM[i].price,0);
+    tot.demand+=dem.reduce((a,d)=>a+d[m],0);tot.sold+=sell.reduce((a,b)=>a+b,0);tot.wcPeak=Math.max(tot.wcPeak,wc);tot.wcAvg+=wc/12;tot.units+=sell.reduce((a,b)=>a+b,0);
+    const demS=FAM.reduce((a,f,i)=>a+dem[i][m]*f.su,0);
+    months.push({m,demS,soldS:shippedS,prodS,inhouse,cm,machine,labourCap,plantCap,motors:prod.reduce((a,p,i)=>a+p*FAM[i].motor,0)+motorShort,motorCap,dispNeed:dispS,dcap,instNeed:want[wmI],instCap,stockS,store,ops,opsNeed:inhouse/1000*C.opsPerKSU,otShare,wc,rev,lostS:lost.reduce((a,l,i)=>a+l*FAM[i].su,0),motorShort,dispShort,instShort,
+      util:{Plant:(inhouse)/Math.max(plantCap,1),Operators:inhouse/Math.max(labourCap,1),Motors:(prod.reduce((a,p,i)=>a+p*FAM[i].motor,0)+motorShort)/motorCap,Dispatch:dispS/dcap,Installers:want[wmI]/instCap,Storage:stockS/store}});
+  }
+  // P&L
+  const baseUnits=FAM.reduce((a,f)=>a+f.base.reduce((p,q)=>p+q,0),0);
+  const unitsGrowth=tot.units/baseUnits-1;const revGrowth=tot.rev/tot.revBase-1;
+  const gc=growthCost(S.G,S.strat,Math.max(0,tot.rev-tot.revBase));
+  const mkt=tot.rev*C.mktBase+gc.mkt;const fixed=C.overhead+gc.fixed+(S.ss2?C.motor2Cost:0);
+  const ebitda=tot.rev-tot.cogs-tot.labour-tot.tech-tot.log-mkt-gc.trade-fixed-tot.wcAvg*C.rate;
+  const capex=(S.line?C.lineCapex:0);
+  const service=tot.sold/Math.max(tot.demand,1);
+  const binds={};months.forEach(x=>Object.entries(x.util).forEach(([k,u])=>{if(u>.985&&(x.lostS>200||(k==="Installers"&&x.instShort>0)))binds[k]=(binds[k]||0)+1}));
+  if(months.some(x=>x.instShort>0))binds.Installers=months.filter(x=>x.instShort>0).length;
+  const verdict=(unitsGrowth>=S.G-.01&&service>=.95&&tot.wcPeak<=C.wcLimit)?"Feasible":(unitsGrowth>=S.G-.04&&service>=.9)?"Stretched":"Not feasible";
+  return{S,months,tot,unitsGrowth,revGrowth,ebitda,margin:ebitda/tot.rev,mkt,gc,fixed,capex,service,binds,verdict,lostRev:tot.lostRev,installBacklog:tot.installBacklog,wcPeak:tot.wcPeak,score:ebitda-capex*.15};
+}
+const BASELINE=simulate({...DEF,G:0});
+let S={...DEF};let CUR=simulate(S);
+function monteCarlo(Sx,n=300){const r=rng(424242);const out=[];for(let i=0;i<n;i++){const common=Math.exp(gaussR(r)*.09);const m=Array.from({length:12},()=>Math.exp(gaussR(r)*.05));const s=simulate(Sx,{common,m});out.push({g:s.unitsGrowth,e:s.ebitda,svc:s.service})}
+  const gs=out.map(x=>x.g).sort((a,b)=>a-b),es=out.map(x=>x.e).sort((a,b)=>a-b);const q=(a,p)=>a[Math.floor(p*(a.length-1))];
+  return{runs:out,pHit:out.filter(x=>x.g>=Sx.G-.01&&x.svc>=.95).length/n,g10:q(gs,.1),g50:q(gs,.5),g90:q(gs,.9),e10:q(es,.1),e50:q(es,.5),e90:q(es,.9)}}
+function optimise(G,strat){
+  let best=null,bestAny=null;const grid={shift:[false,true],line:[false,true],cm:[0,5,10,15],ops:[0,40,80,120,160],tech:[0,20,40,60,80],ss2:[false,true],tpl:[false,true],pre:[false,true]};
+  let n=0;for(const shift of grid.shift)for(const line of grid.line)for(const cm of grid.cm)for(const ops of grid.ops)for(const tech of grid.tech)for(const ss2 of grid.ss2)for(const tpl of grid.tpl)for(const pre of grid.pre){
+    const Sx={G,strat,shift,line,cm,ops,tech,ss2,tpl,pre};const r=simulate(Sx);n++;
+    if(r.unitsGrowth>=G-.005&&r.service>=.95&&r.wcPeak<=C.wcLimit){if(!best||r.score>best.score)best=r}
+    if(!bestAny||r.unitsGrowth+r.score/1e10>bestAny.unitsGrowth+bestAny.score/1e10)bestAny=r}
+  return{best,bestAny,evaluated:n};
+}
+
+/* ===================== RENDER ===================== */
+const charts={};const hasChart=typeof window.Chart!=="undefined";
+function baseOpts(){const m=cssv("--muted"),line=cssv("--line");Chart.defaults.font.family='"Source Sans 3", "Segoe UI", system-ui, sans-serif';Chart.defaults.font.size=12;Chart.defaults.color=m;
+  return{responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{labels:{boxWidth:10,boxHeight:10}},tooltip:{backgroundColor:cssv("--fg"),titleColor:cssv("--surface"),bodyColor:cssv("--surface"),padding:9,cornerRadius:6}},scales:{x:{grid:{display:false},ticks:{color:m},border:{color:line}},y:{grid:{color:line},ticks:{color:m},border:{display:false}}}}}
+function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg)}
+const pill=(t,c)=>`<span class="pill" style="--pc:var(${c})">${esc(t)}</span>`;
+const VC={Feasible:"--good",Stretched:"--warn","Not feasible":"--crit"};
+const go=id=>{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})};
+let MC=null;const pinned=[];
+
+function syncInputs(){$("#g").value=Math.round(S.G*100);$("#shift").checked=S.shift;$("#line").checked=S.line;$("#cm").value=S.cm;$("#ops").value=S.ops;$("#tech").value=S.tech;$("#ss2").checked=S.ss2;$("#tpl").checked=S.tpl;$("#pre").checked=S.pre;
+  $("#gV").textContent="+"+Math.round(S.G*100)+"%";$("#cmV").textContent=S.cm+"k";$("#opsV").textContent=S.ops;$("#techV").textContent=S.tech;
+  $("#strat").innerHTML=Object.entries(STRATS).map(([k,v])=>`<button data-strat="${k}" aria-pressed="${S.strat===k}">${v.n}</button>`).join("");$("#stratH").textContent=STRATS[S.strat].h}
+const bindLabel={Plant:"plant capacity",Operators:"operators",Motors:"motor supply",Dispatch:"dispatch capacity",Installers:"installation technicians",Storage:"warehouse space"};
+function renderTop(){
+  const r=CUR;const bl=Object.entries(r.binds).sort((a,b)=>b[1]-a[1]);
+  $("#pipe").innerHTML=[["01","Model the business","Demand, capacity, people, cash","12 months × 6 resources","s-lab"],["02","Simulate","Month-by-month flow",`${pct(r.unitsGrowth,1)} growth delivered`,"s-sim"],["03","Find what breaks","Binding constraints",bl.length?bl.map(b=>bindLabel[b[0]]).slice(0,2).join(", "):"Nothing binds","s-sim"],["04","Optimise & stress-test","Cheapest plan, Monte Carlo",MC?`${pct(MC.pHit,0)} chance to hit target`:"Run the optimiser","s-risk"]]
+   .map(([n,t,d,v,id])=>`<button data-go="${id}"><span class="st">${n}</span><b>${t}</b><span class="d">${d}</span><span class="v">${v}</span></button>`).join("");
+  const de=r.ebitda-BASELINE.ebitda;
+  $("#verdict").style.setProperty("--vc",`var(${VC[r.verdict]})`);
+  $("#verdict").innerHTML=`<div class="tag">${r.verdict}<small>for +${Math.round(r.S.G*100)}% via ${STRATS[r.S.strat].n.toLowerCase()}</small></div>
+   <p>${r.verdict==="Feasible"?`The business can deliver <b>${pct(r.unitsGrowth)}</b> growth at a ${pct(r.service)} service level. EBITDA moves by <b>${de>=0?"+":"−"}${cr(Math.abs(de))}</b>${r.capex?` with ${cr(r.capex)} of capex`:""}.`:`Only <b>${pct(r.unitsGrowth)}</b> of the +${Math.round(r.S.G*100)}% is delivered and service falls to ${pct(r.service)}. ${bl.length?`It breaks on <b>${bl.map(b=>`${bindLabel[b[0]]} (${b[1]} month${b[1]>1?"s":""})`).join(", ")}</b>.`:""} ${cr(r.lostRev)} of demand is lost to competitors.`}</p>
+   <div class="gauge"><b class="${r.unitsGrowth>=r.S.G-.01?"up-good":"up-bad"}">${pct(r.unitsGrowth)}</b><span>delivered vs +${Math.round(r.S.G*100)}% target</span></div>`;
+  $("#kpis").innerHTML=[
+    ["Revenue (12 mo)",cr(r.tot.rev),`${r.revGrowth>=0?"+":""}${pct(r.revGrowth)} vs ${cr(BASELINE.tot.rev)} baseline`],
+    ["EBITDA",cr(r.ebitda),`<span class="${de>=0?"up-good":"up-bad"}">${de>=0?"+":"−"}${cr(Math.abs(de))}</span> · margin ${pct(r.margin)}`],
+    ["Service level",pct(r.service),`${cr(r.lostRev)} demand lost`],
+    ["Peak overtime",pct(Math.max(...r.months.map(x=>x.otShare)),0),`${r.months.filter(x=>x.otShare>.08).length} months above 8%`],
+    ["Install backlog",Math.round(r.installBacklog).toLocaleString("en-IN"),"washing machines waiting for a technician"],
+    ["Peak working capital",cr(r.wcPeak),`limit ${cr(C.wcLimit)}${r.wcPeak>C.wcLimit?' · <b class="up-bad">over</b>':""}`]
+  ].map(([l,v,s])=>`<div class="kpi"><span class="l">${l}</span><span class="v">${v}</span><span class="s">${s}</span></div>`).join("");
+}
+function renderHM(){
+  const r=CUR;const res=["Plant","Operators","Motors","Dispatch","Installers","Storage"];
+  let h=`<table><thead><tr><th class="rl">Utilisation</th>${M.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>`;
+  res.forEach(k=>{h+=`<tr><th class="rl">${bindLabel[k][0].toUpperCase()+bindLabel[k].slice(1)}</th>`+r.months.map(x=>{const u=x.util[k];const bind=u>.985&&(x.lostS>200||(k==="Installers"&&x.instShort>0));const col=u>1?"--crit":u>.9?"--warn":"--good";return`<td class="${bind?"bind":""}" style="background:color-mix(in oklab,var(${col}) ${Math.round(clamp(u,0,1.3)/1.3*55+8)}%,var(--surface))" title="${M[x.m]} · ${bindLabel[k]} ${pct(u,0)}">${Math.round(u*100)}</td>`}).join("")+"</tr>"});
+  $("#hm").innerHTML=h+"</tbody></table>";
+  const bl=Object.entries(r.binds).sort((a,b)=>b[1]-a[1]);const worst=r.months.reduce((a,x)=>x.lostS>a.lostS?x:a,r.months[0]);
+  $("#bindInsight").innerHTML=bl.length?`<b>First to break: ${bindLabel[bl[0][0]]}.</b> Outlined cells are months where a resource is maxed out and sales are lost. The worst month is ${M[worst.m]}, with ${fmtK(worst.lostS)} standard units of demand unserved. ${bl[0][0]==="Installers"?"Washing machines sell, but customers wait for installation and some cancel.":bl[0][0]==="Motors"?"The single motor supplier caps cooler and washing-machine output in the summer peak.":bl[0][0]==="Operators"?"Machines are free but there aren't enough people to run them, even with overtime.":"Fixing this one constraint moves the bottleneck to the next resource."}`:`<b>No resource binds.</b> Every resource stays below its limit in all 12 months with this set of decisions.`;
+}
+function renderCharts(){
+  if(!hasChart)return;const o=baseOpts();const r=CUR;const acc=cssv("--accent"),gold=cssv("--gold"),crit=cssv("--crit"),ink2=cssv("--ink2"),good=cssv("--good"),mut=cssv("--muted");
+  mk("cMain",{data:{labels:M,datasets:[
+    {type:"bar",label:"In-house production",data:r.months.map(x=>+(x.inhouse/1000).toFixed(1)),backgroundColor:alpha(acc,.7),stack:"p",borderRadius:2},
+    {type:"bar",label:"Contract manufacturing",data:r.months.map(x=>+(x.cm/1000).toFixed(1)),backgroundColor:alpha(ink2,.7),stack:"p",borderRadius:2},
+    {type:"line",label:"Demand",data:r.months.map(x=>+(x.demS/1000).toFixed(1)),borderColor:gold,backgroundColor:gold,borderWidth:2.5,pointRadius:3,tension:.3},
+    {type:"line",label:"Fulfilled sales",data:r.months.map(x=>+(x.soldS/1000).toFixed(1)),borderColor:good,backgroundColor:good,borderWidth:2.5,pointRadius:2,tension:.3,borderDash:[5,3]},
+    {type:"line",label:"Plant limit",data:r.months.map(x=>+(x.plantCap/1000).toFixed(1)),borderColor:crit,borderWidth:1.5,pointRadius:0,stepped:true,borderDash:[2,3]}]},
+    options:{...o,interaction:{mode:"index",intersect:false},scales:{x:{...o.scales.x,stacked:true},y:{...o.scales.y,stacked:false,beginAtZero:true,title:{display:true,text:"thousand standard units"}}}}});
+  // bridge
+  const B=BASELINE;const steps=[["Baseline",B.ebitda,"base"],["Extra gross margin",(r.tot.rev-r.tot.cogs)-(B.tot.rev-B.tot.cogs),"d"],["Labour & overtime",-(r.tot.labour-B.tot.labour),"d"],["Technicians",-(r.tot.tech-B.tot.tech),"d"],["Logistics",-(r.tot.log-B.tot.log),"d"],["Growth cost (mkt, trade, launch)",-((r.mkt-B.mkt)+r.gc.trade+(r.fixed-B.fixed)),"d"],["Working-capital interest",-(r.tot.wcAvg-B.tot.wcAvg)*C.rate,"d"],["Scenario",r.ebitda,"base"]];
+  let run=0;const data=steps.map(([l,v,t])=>{if(t==="base"){run=v;return[0,v/1e7]}const a=run;run+=v;return[a/1e7,run/1e7]});
+  mk("cBridge",{type:"bar",data:{labels:steps.map(s=>s[0]),datasets:[{label:"₹ Cr",data,backgroundColor:steps.map(([l,v,t])=>t==="base"?alpha(acc,.8):v>=0?alpha(good,.8):alpha(crit,.8)),borderRadius:3}]},
+    options:{...o,plugins:{...o.plugins,legend:{display:false},tooltip:{...o.plugins.tooltip,callbacks:{label:c=>{const s=steps[c.dataIndex];return s[2]==="base"?`₹${(s[1]/1e7).toFixed(1)} Cr`:`${s[1]>=0?"+":"−"}₹${Math.abs(s[1]/1e7).toFixed(1)} Cr`}}}},scales:{x:{...o.scales.x,ticks:{...o.scales.x.ticks,autoSkip:false,maxRotation:0,callback:function(v){const s=this.getLabelForValue(v);return s.length>12?s.replace(" (mkt, trade, launch)","").split(" "):s}}},y:{...o.scales.y,title:{display:true,text:"₹ crore"}}}}});
+  mk("cPeople",{data:{labels:M,datasets:[{type:"bar",label:"Operators needed",data:r.months.map(x=>Math.round(x.opsNeed)),backgroundColor:alpha(gold,.6),borderRadius:3,yAxisID:"y"},{type:"line",label:"Operators on payroll",data:r.months.map(x=>Math.round(x.ops)),borderColor:acc,borderWidth:2.5,pointRadius:2,yAxisID:"y"},{type:"line",label:"Overtime %",data:r.months.map(x=>+(x.otShare*100).toFixed(1)),borderColor:crit,borderDash:[4,3],borderWidth:2,pointRadius:0,yAxisID:"y1"},{type:"line",label:"Working capital (₹ Cr)",data:r.months.map(x=>+(x.wc/1e7).toFixed(1)),borderColor:ink2,borderWidth:1.8,pointRadius:0,yAxisID:"y2",hidden:false}]},
+    options:{...o,interaction:{mode:"index",intersect:false},scales:{x:o.scales.x,y:{...o.scales.y,beginAtZero:true,title:{display:true,text:"operators"}},y1:{position:"right",min:0,max:30,grid:{display:false},ticks:{color:mut,callback:v=>v+"%"},border:{display:false}},y2:{display:false,beginAtZero:true}}}});
+  const pk=r.months.reduce((a,x)=>x.otShare>a.otShare?x:a,r.months[0]);
+  $("#peopleInsight").innerHTML=pk.otShare>.08?`<b>Overtime peaks at ${pct(pk.otShare,0)} in ${M[pk.m]}.</b> Above 8% for two months running, the model raises attrition by 1.5 points a month, so heavy overtime erodes the workforce it depends on.`:`<b>Overtime stays within safe limits</b> (peak ${pct(pk.otShare,0)} in ${M[pk.m]}). Peak working capital is ${cr(r.wcPeak)} against a ${cr(C.wcLimit)} limit.`;
+  renderMCChart();
+}
+function renderMCChart(){
+  if(!hasChart||!MC)return;const o=baseOpts();const bins=Array(16).fill(0);const lo=-.05,hi=.4;MC.runs.forEach(x=>{const b=clamp(Math.floor((x.g-lo)/(hi-lo)*16),0,15);bins[b]++});
+  const labels=bins.map((_,i)=>((lo+(i+.5)*(hi-lo)/16)*100).toFixed(0)+"%");const tgt=S.G;
+  mk("cMC",{type:"bar",data:{labels,datasets:[{label:"Runs",data:bins,backgroundColor:bins.map((_,i)=>lo+(i+1)*(hi-lo)/16>=tgt-.01?alpha(cssv("--good"),.75):alpha(cssv("--crit"),.6)),borderRadius:3}]},
+    options:{...o,plugins:{...o.plugins,legend:{display:false},tooltip:{...o.plugins.tooltip,callbacks:{title:c=>"Growth ≈ "+c[0].label,label:c=>c.raw+" of 300 futures"}}},scales:{x:{...o.scales.x,title:{display:true,text:"Growth delivered"}},y:{...o.scales.y,beginAtZero:true}}}});
+  $("#riskOut").innerHTML=`<div><span>Chance of hitting +${Math.round(S.G*100)}%</span><b class="${MC.pHit>=.7?"up-good":MC.pHit>=.4?"warn":"up-bad"}">${pct(MC.pHit,0)}</b></div><div><span>Growth P10 / P50 / P90</span><b>${pct(MC.g10,0)} / ${pct(MC.g50,0)} / ${pct(MC.g90,0)}</b></div><div><span>EBITDA P10 – P90</span><b>${cr(MC.e10)} – ${cr(MC.e90)}</b></div>`;
+}
+const PRESETS={
+ "Do nothing":s=>({...DEF,G:s.G,strat:s.strat}),
+ "Lean (overtime + 3PL)":s=>({...DEF,G:s.G,strat:s.strat,cm:5,tech:30,tpl:true,pre:true}),
+ "Invest (line + hires)":s=>({...DEF,G:s.G,strat:s.strat,line:true,ops:120,tech:60,ss2:true,tpl:true,pre:true}),
+ "Third shift":s=>({...DEF,G:s.G,strat:s.strat,shift:true,ops:160,tech:60,ss2:true,tpl:true,pre:true})
+};
+function renderCompare(){
+  const rows=Object.entries(PRESETS).map(([n,f])=>({n,r:simulate(f(S))}));let optRow=lastOpt&&lastOpt.S.G===S.G&&lastOpt.S.strat===S.strat?[{n:"Agent-optimised",r:lastOpt}]:[];
+  const all=[...rows,...optRow,...pinned.map(p=>({n:p.n,r:simulate(p.S)})),{n:"Current settings",r:CUR,cur:true}];
+  $("#cmpRows").innerHTML=all.map(x=>`<tr class="${x.cur?"cur":""}"><td><b>${esc(x.n)}</b><div class="note">${STRATS[x.r.S.strat].n} · +${Math.round(x.r.S.G*100)}% target</div></td><td class="n ${x.r.unitsGrowth>=x.r.S.G-.01?"up-good":"up-bad"}">${pct(x.r.unitsGrowth)}</td><td class="n">${pct(x.r.service)}</td><td class="n">${cr(x.r.ebitda)}</td><td class="n">${x.r.capex?cr(x.r.capex):"-"}</td><td class="n">${cr(x.r.wcPeak)}</td><td>${pill(x.r.verdict,VC[x.r.verdict])}</td></tr>`).join("");
+}
+$("#presets").innerHTML=Object.keys(PRESETS).map(n=>`<button class="btn" data-preset="${esc(n)}" style="padding:5px 9px;font-size:12px">${esc(n)}</button>`).join("");
+let lastOpt=null;
+function run(){CUR=simulate(S);MC=monteCarlo(S);syncInputs();renderTop();renderHM();renderCharts();renderCompare()}
+
+/* ===================== AGENT TOOLS ===================== */
+const summ=r=>({target_growth:r.S.G,strategy:STRATS[r.S.strat].n,decisions:{third_shift:r.S.shift,new_line:r.S.line,contract_mfg_k:r.S.cm,hire_operators:r.S.ops,hire_technicians:r.S.tech,second_motor_supplier:r.S.ss2,flex_3pl:r.S.tpl,prebuild:r.S.pre},
+  verdict:r.verdict,growth_delivered:+r.unitsGrowth.toFixed(3),revenue_cr:+(r.tot.rev/1e7).toFixed(1),revenue_growth:+r.revGrowth.toFixed(3),ebitda_cr:+(r.ebitda/1e7).toFixed(1),ebitda_change_vs_baseline_cr:+((r.ebitda-BASELINE.ebitda)/1e7).toFixed(1),ebitda_margin:+r.margin.toFixed(3),capex_cr:r.capex/1e7,
+  service_level:+r.service.toFixed(3),lost_demand_cr:+(r.lostRev/1e7).toFixed(1),install_backlog_units:Math.round(r.installBacklog),peak_overtime:+Math.max(...r.months.map(x=>x.otShare)).toFixed(3),peak_working_capital_cr:+(r.wcPeak/1e7).toFixed(1),working_capital_limit_cr:C.wcLimit/1e7,
+  binding_constraints:Object.entries(r.binds).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({resource:bindLabel[k],months:v})),worst_months:[...r.months].sort((a,b)=>b.lostS-a.lostS).slice(0,3).filter(x=>x.lostS>100).map(x=>({month:M[x.m],lost_std_units:Math.round(x.lostS)}))});
+const T={
+ current_scenario(){return{...summ(CUR),baseline_ebitda_cr:+(BASELINE.ebitda/1e7).toFixed(1),baseline_revenue_cr:+(BASELINE.tot.rev/1e7).toFixed(1),risk:MC?{p_hit_target:+MC.pHit.toFixed(2),growth_p10:+MC.g10.toFixed(3),growth_p90:+MC.g90.toFixed(3)}:null}},
+ set_scenario(args){const a=args||{};const map={target_growth:"G",strategy:"strat",third_shift:"shift",new_line:"line",contract_mfg_k:"cm",hire_operators:"ops",hire_technicians:"tech",second_motor_supplier:"ss2",flex_3pl:"tpl",prebuild:"pre"};
+   const before=summ(CUR);for(const [k,v] of Object.entries(a)){const key=map[k];if(!key)continue;if(key==="G")S.G=clamp(+v>1?+v/100:+v,0,.4);else if(key==="strat"){const s=String(v).toLowerCase();S.strat=/price/.test(s)?"price":/market/.test(s)?"mkt":/channel/.test(s)?"channel":"mix"}else if(["cm","ops","tech"].includes(key))S[key]=+v;else S[key]=!!v}
+   run();return{before:{growth:before.growth_delivered,ebitda_cr:before.ebitda_cr,verdict:before.verdict},after:summ(CUR),note:"Dashboard updated"}},
+ optimise_plan({target_growth,strategy}){const G=target_growth!=null?clamp(+target_growth>1?+target_growth/100:+target_growth,0,.4):S.G;const st=strategy?(/price/i.test(strategy)?"price":/market/i.test(strategy)?"mkt":/channel/i.test(strategy)?"channel":"mix"):S.strat;
+   const o=optimise(G,st);const pick=o.best||o.bestAny;S={...pick.S};lastOpt=pick;run();return{evaluated_plans:o.evaluated,target_met:!!o.best,plan:summ(pick),note:o.best?"Highest EBITDA (net of a 15% annual charge on capex) among plans that hit the target at ≥95% service within the working-capital limit. Dashboard set to this plan.":"No combination hits the target; this is the plan that gets closest. Dashboard set to it."}},
+ compare_strategies({target_growth}){const G=target_growth!=null?clamp(+target_growth>1?+target_growth/100:+target_growth,0,.4):S.G;return Object.entries(STRATS).map(([k,v])=>{const o=optimise(G,k);const p=o.best||o.bestAny;return{strategy:v.n,target_met:!!o.best,growth:+p.unitsGrowth.toFixed(3),ebitda_cr:+(p.ebitda/1e7).toFixed(1),capex_cr:p.capex/1e7,service:+p.service.toFixed(3),key_decisions:Object.entries(summ(p).decisions).filter(([a,b])=>b&&b!==0).map(([a,b])=>b===true?a:`${a}=${b}`)}})},
+ max_feasible_growth({strategy}){const st=strategy?(/price/i.test(strategy)?"price":/market/i.test(strategy)?"mkt":/channel/i.test(strategy)?"channel":"mix"):S.strat;const out=[];
+   for(const g of [.05,.1,.15,.2,.25,.3,.35,.4]){const none=simulate({...DEF,G:g,strat:st});const full=simulate({...DEF,G:g,strat:st,shift:true,line:true,cm:15,ops:160,tech:80,ss2:true,tpl:true,pre:true});out.push({target:g,with_no_action:{growth:+none.unitsGrowth.toFixed(3),verdict:none.verdict},with_all_levers:{growth:+full.unitsGrowth.toFixed(3),verdict:full.verdict,ebitda_cr:+(full.ebitda/1e7).toFixed(1)}})}
+   return{strategy:STRATS[st].n,curve:out}},
+ risk_analysis(){MC=monteCarlo(S);renderTop();renderMCChart();return{runs:300,demand_uncertainty:"±9% common shock, ±5% monthly",p_hit_target:+MC.pHit.toFixed(2),growth_p10:+MC.g10.toFixed(3),growth_p50:+MC.g50.toFixed(3),growth_p90:+MC.g90.toFixed(3),ebitda_p10_cr:+(MC.e10/1e7).toFixed(1),ebitda_p90_cr:+(MC.e90/1e7).toFixed(1)}}
+};
+
+/* ===================== BUILT-IN ENGINE ===================== */
+function local(q){
+  const steps=[];const call=(n,a)=>{steps.push(n+"("+(a?Object.entries(a).map(([k,v])=>`${k}=${v}`).join(", "):"")+")");return T[n](a||{})};
+  const t=q.toLowerCase();const num=(t.match(/(\d+(?:\.\d+)?)\s*%/)||t.match(/\b(\d{1,2})\b/)||[])[1];
+  const stName=/price/.test(t)?"price":/marketing/.test(t)?"marketing":/channel/.test(t)?"channel":null;
+  const fmtPlan=p=>Object.entries(p.decisions).filter(([a,b])=>b&&b!==0).map(([a,b])=>({third_shift:"third shift",new_line:"new assembly line (₹22 Cr)",second_motor_supplier:"second motor supplier",flex_3pl:"3PL flex capacity",prebuild:"seasonal pre-build"}[a]||`${a.replace(/_/g," ")} ${b}${a==="contract_mfg_k"?"k units/mo":""}`)).join(", ")||"no extra actions";
+  if(/compare|which strategy|best way to grow|price.*marketing|strategies/.test(t)){const r=call("compare_strategies",{target_growth:num?+num/100:undefined});const best=[...r].filter(x=>x.target_met).sort((a,b)=>b.ebitda_cr-a.ebitda_cr)[0];
+    return{steps,text:`#### Four ways to grow ${num?num+"%":Math.round(S.G*100)+"%"}, each with its cheapest operating plan\n${r.map(x=>`- **${x.strategy}**: ${x.target_met?"✓ hits target":"✗ "+pct(x.growth)}, EBITDA **₹${x.ebitda_cr} Cr**${x.capex_cr?`, capex ₹${x.capex_cr} Cr`:""}, service ${pct(x.service)}`).join("\n")}\n\n${best?`**Best route: ${best.strategy}.** Price-led growth is fastest but gives away margin on every unit, not just the extra ones. Channel growth ramps slowly, so it needs more capacity later in the year.`:"No route hits the target with the available levers."}`}}
+  if(/optimi|cheapest|best plan|minimum|least cost|how do we|what do we need|make it feasible/.test(t)){const r=call("optimise_plan",{target_growth:num?+num/100:undefined,strategy:stName||undefined});const p=r.plan;
+    return{steps,text:`#### ${r.target_met?"Cheapest plan that hits":"Closest plan to"} +${Math.round(p.target_growth*100)}% (${p.strategy})\nI tested **${r.evaluated_plans.toLocaleString("en-IN")}** combinations of decisions.\n\n**Do this:** ${fmtPlan(p)}.\n\n**Result:** ${pct(p.growth_delivered)} growth, service ${pct(p.service_level)}, EBITDA **₹${p.ebitda_cr} Cr** (${p.ebitda_change_vs_baseline_cr>=0?"+":""}₹${p.ebitda_change_vs_baseline_cr} Cr vs baseline), peak working capital ₹${p.peak_working_capital_cr} Cr${p.capex_cr?`, capex ₹${p.capex_cr} Cr`:""}.\n${p.binding_constraints.length?`Still tight: ${p.binding_constraints.map(b=>b.resource).join(", ")}.`:""}\n\nThe dashboard is now set to this plan; check the risk panel for the chance it holds up.`}}
+  if(/what if|set|turn|add|hire|without|switch|use|enable|remove/.test(t)&&/shift|line|contract|operator|technician|installer|motor|supplier|3pl|logistic|pre-?build|growth|target|price|marketing|channel/.test(t)){const a={};const off=/without|remove|no |turn off|disable/.test(t);
+    if(/shift/.test(t))a.third_shift=!off;if(/new line|assembly line|\bline\b/.test(t))a.new_line=!off;if(/contract/.test(t))a.contract_mfg_k=off?0:(num?+num:10);if(/operator/.test(t))a.hire_operators=off?0:(num?+num:100);if(/technician|installer/.test(t))a.hire_technicians=off?0:(num?+num:40);if(/motor|supplier/.test(t))a.second_motor_supplier=!off;if(/3pl|logistic|warehouse/.test(t))a.flex_3pl=!off;if(/pre-?build/.test(t))a.prebuild=!off;
+    if(/growth|target|grow/.test(t)&&num)a.target_growth=+num/100;if(stName)a.strategy=stName;
+    const r=call("set_scenario",a);const p=r.after;
+    return{steps,text:`#### Scenario updated\n- Verdict: ${r.before.verdict} → **${p.verdict}**\n- Growth delivered: ${pct(r.before.growth)} → **${pct(p.growth_delivered)}**\n- EBITDA: ₹${r.before.ebitda_cr} Cr → **₹${p.ebitda_cr} Cr**\n- Service ${pct(p.service_level)} · install backlog ${p.install_backlog_units.toLocaleString("en-IN")} · peak overtime ${pct(p.peak_overtime,0)}\n${p.binding_constraints.length?`\n**Now binding:** ${p.binding_constraints.map(b=>`${b.resource} (${b.months} mo)`).join(", ")}`:"\nNothing binds now."}${p.decisions.third_shift&&p.decisions.hire_operators<80?"\n\n**Note:** a third shift adds machines, not people. Without about 80+ extra operators it runs on overtime, and sustained overtime raises attrition, so output can fall instead of rising.":""}`}}
+  if(/how much|maximum|max|ceiling|limit|could we grow|highest growth/.test(t)){const r=call("max_feasible_growth",{strategy:stName||undefined});
+    const noAct=r.curve.filter(x=>x.with_no_action.verdict==="Feasible").pop();const all=r.curve.filter(x=>x.with_all_levers.verdict==="Feasible").pop();
+    return{steps,text:`#### How far can we grow? (${r.strategy})\n- **With today's resources:** up to about **${noAct?Math.round(noAct.target*100)+"%":"under 5%"}** before something breaks\n- **With every lever pulled:** up to about **${all?Math.round(all.target*100)+"%":"-"}**\n\n${r.curve.map(x=>`- +${Math.round(x.target*100)}%: no action ${pct(x.with_no_action.growth)} (${x.with_no_action.verdict}), all levers ${pct(x.with_all_levers.growth)} (${x.with_all_levers.verdict})`).join("\n")}`}}
+  if(/risk|chance|probab|uncertain|monte|confiden|downside/.test(t)){const r=call("risk_analysis");
+    return{steps,text:`#### Risk on the current plan (300 simulated futures)\n- Chance of delivering the target at ≥95% service: **${pct(r.p_hit_target,0)}**\n- Growth delivered: P10 **${pct(r.growth_p10)}**, median ${pct(r.growth_p50)}, P90 ${pct(r.growth_p90)}\n- EBITDA range: ₹${r.ebitda_p10_cr} – ₹${r.ebitda_p90_cr} Cr\n\n${r.p_hit_target<.6?"The plan has little slack: a small demand surprise breaks it. Add flexible capacity (contract manufacturing or 3PL) rather than fixed capacity.":"The plan has enough buffer for normal demand swings."}`}}
+  const r=call("current_scenario");
+  return{steps,text:`#### Can we grow ${Math.round(r.target_growth*100)}%? With current settings: **${r.verdict}**\nThe business delivers **${pct(r.growth_delivered)}** growth at **${pct(r.service_level)}** service. EBITDA is ₹${r.ebitda_cr} Cr (${r.ebitda_change_vs_baseline_cr>=0?"+":""}₹${r.ebitda_change_vs_baseline_cr} Cr vs the no-growth baseline).\n\n${r.binding_constraints.length?`**What breaks, in order:**\n${r.binding_constraints.map((b,i)=>`${i+1}. ${b.resource[0].toUpperCase()+b.resource.slice(1)}: maxed out for ${b.months} month${b.months>1?"s":""}`).join("\n")}\n\nWorst months: ${r.worst_months.map(w=>`${w.month} (${(w.lost_std_units/1000).toFixed(1)}k units lost)`).join(", ")}.`:"Nothing binds."}\n\nThe constraints are seasonal: coolers peak in Mar–May and washing machines in Sep–Oct, so the plant is fine on average but short in the peaks. Ask me to **find the cheapest plan**, **compare strategies**, or **show the risk**.`};
+}
+
+/* ===================== CLAUDE ENGINE ===================== */
+let sample=null,useClaude=false,claudeOK=false;
+const TOOLDEFS=[
+ {name:"current_scenario",description:"Current settings and simulated results: verdict, growth delivered, revenue, EBITDA vs baseline, service, lost demand, install backlog, overtime, working capital, binding constraints, worst months, risk."},
+ {name:"set_scenario",description:"Change decisions and re-run (dashboard updates). Any subset of: target_growth (0-0.4), strategy (price|marketing|channel|mix), third_shift, new_line, contract_mfg_k (0-15), hire_operators (0-200), hire_technicians (0-80), second_motor_supplier, flex_3pl, prebuild.",inputSchema:{type:"object",properties:{target_growth:{type:"number"},strategy:{type:"string"},third_shift:{type:"boolean"},new_line:{type:"boolean"},contract_mfg_k:{type:"number"},hire_operators:{type:"number"},hire_technicians:{type:"number"},second_motor_supplier:{type:"boolean"},flex_3pl:{type:"boolean"},prebuild:{type:"boolean"}}}},
+ {name:"optimise_plan",description:"Search 3,200 decision combinations for the highest-EBITDA plan (capex charged at 15%/yr) that hits the target at ≥95% service within the working-capital limit; sets the dashboard to it.",inputSchema:{type:"object",properties:{target_growth:{type:"number"},strategy:{type:"string"}}}},
+ {name:"compare_strategies",description:"For a target, the optimised plan under each growth strategy (price, marketing, channel, mix).",inputSchema:{type:"object",properties:{target_growth:{type:"number"}}}},
+ {name:"max_feasible_growth",description:"Growth delivered and verdict at targets 5–40%, with no action and with all levers, for a strategy.",inputSchema:{type:"object",properties:{strategy:{type:"string"}}}},
+ {name:"risk_analysis",description:"Monte Carlo (300 runs, demand uncertainty) on the current plan: chance of hitting target, growth and EBITDA percentiles."}
+];
+const RULES=`You are Strategy Agent, an AI scenario analyst for a home-appliances maker (Hyderabad plant; air coolers peak Mar–May, washing machines and kitchen appliances peak Sep–Nov). All data is assumed/synthetic for a case study. Baseline 12-month revenue is about ₹546 Cr. The simulator runs 12 monthly periods (Nov 2026–Oct 2027) linking demand (target growth × strategy ramp), plant machine capacity, operators and overtime (with burnout attrition), installation technicians, a single motor supplier, dispatch and storage, working capital, and a P&L. Use tools for every number; never invent figures. Use set_scenario or optimise_plan for what-ifs and say the dashboard changed. Indian currency (₹ crore). Lead with the answer (feasible or not, and why), then evidence, then actions. Under ~220 words. Short markdown: '####' headings, bullets, numbered steps, **bold** for key numbers.`;
+async function askClaude(q,hist,onStep,onText,signal){const turns=[{role:"user",content:RULES},...hist.slice(-8),{role:"user",content:q}];
+  const tools=TOOLDEFS.map(d=>({...d,execute:i=>{onStep(d.name+"("+Object.entries(i||{}).map(([k,v])=>k+"="+v).join(", ")+")");return T[d.name](i||{})}}));
+  return(await sample(turns,{tools,signal,modelTier:"quick",onText:({text})=>onText(text)})).text}
+
+/* ===================== CHAT ===================== */
+const hist=[];let busy=false,ctl=null;
+function md(s){const lines=String(s).replace(/\r/g,"").split("\n");let out="",list=null,tbl=[];
+  const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>");
+  const close=()=>{if(list){out+=`</${list}>`;list=null}};const flushT=()=>{if(!tbl.length)return;const rows=tbl.filter(r=>!/^\s*\|?\s*:?-{2,}/.test(r)).map(r=>r.trim().replace(/^\||\|$/g,"").split("|"));out+="<table>"+rows.map((r,i)=>"<tr>"+r.map(c=>i?`<td>${inl(c.trim())}</td>`:`<th>${inl(c.trim())}</th>`).join("")+"</tr>").join("")+"</table>";tbl=[]};
+  for(const l of lines){if(/^\s*\|.*\|\s*$/.test(l)){close();tbl.push(l);continue}else flushT();let m;
+    if(m=l.match(/^#{1,6}\s+(.*)/)){close();out+=`<h4>${inl(m[1])}</h4>`}else if(m=l.match(/^\s*[-*•]\s+(.*)/)){if(list!=="ul"){close();out+="<ul>";list="ul"}out+=`<li>${inl(m[1])}</li>`}
+    else if(m=l.match(/^\s*\d+[.)]\s+(.*)/)){if(list!=="ol"){close();out+="<ol>";list="ol"}out+=`<li>${inl(m[1])}</li>`}else if(l.trim()===""){close()}else{close();out+=`<p>${inl(l)}</p>`}}
+  close();flushT();return out}
+function addMsg(role,html){const d=document.createElement("div");d.className="msg "+role;if(role==="u")d.textContent=html;else d.innerHTML=`<div class="trace"></div><div class="body">${html}</div>`;$("#msgs").appendChild(d);$("#msgs").scrollTop=$("#msgs").scrollHeight;return d}
+function engineLabel(){$("#engineBtn").innerHTML=useClaude?"engine: <b>Claude · live</b>":"engine: <b>built-in</b>"}
+async function send(q){q=q.trim();if(!q||busy)return;busy=true;$("#sendBtn").textContent="Stop";$("#q").value="";
+  addMsg("u",q);const m=addMsg("a",`<span class="thinking">Running the simulator…</span>`);const tr=m.querySelector(".trace"),body=m.querySelector(".body");
+  const step=s=>{const sp=document.createElement("span");sp.textContent=s;tr.appendChild(sp)};let text="";
+  try{if(useClaude&&sample){ctl=new AbortController();text=await askClaude(q,hist,step,t=>{body.innerHTML=md(t);$("#msgs").scrollTop=$("#msgs").scrollHeight},ctl.signal);body.innerHTML=md(text)}
+    else{await new Promise(r=>setTimeout(r,250));const r=local(q);r.steps.forEach(step);text=r.text;body.innerHTML=md(text)}
+    hist.push({role:"user",content:q},{role:"assistant",content:text})}
+  catch(e){const c=e&&e.code;
+    if(c==="cancelled")body.innerHTML=e.text?md(e.text):`<span class="thinking">Stopped.</span>`;
+    else if(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed","tools_unavailable"].includes(c)){claudeOK=false;useClaude=false;engineLabel();const r=local(q);r.steps.forEach(step);body.innerHTML=`<p class="note">Claude isn't available here, so the built-in engine answered.</p>`+md(r.text);hist.push({role:"user",content:q},{role:"assistant",content:r.text})}
+    else if(c==="rate_limited")body.innerHTML=`<p>Claude is rate-limited right now. Try again in a minute or switch to the built-in engine.</p>`;
+    else if(c)body.innerHTML=(e.text?md(e.text):"")+`<p class="note">The answer was interrupted (${esc(c)}). Send again to retry.</p>`;
+    else body.innerHTML=`<p>Something went wrong: ${esc(e&&e.message||e)}</p>`}
+  finally{busy=false;ctl=null;$("#sendBtn").textContent="Send";$("#msgs").scrollTop=$("#msgs").scrollHeight}}
+function greet(){const r=CUR;const bl=Object.entries(r.binds).sort((a,b)=>b[1]-a[1]);addMsg("a",md(`#### Strategy agent ready\nIf the company simply pushes for **+20%** with today's resources, the plan is **${r.verdict.toLowerCase()}**: it delivers **${pct(r.unitsGrowth)}** growth at ${pct(r.service)} service${bl.length?`, breaking first on **${bl.map(b=>bindLabel[b[0]]).slice(0,3).join(", ")}**`:""}.\n\nAsk me to find the cheapest plan that makes +20% work, compare growth strategies, test a decision, or show the risk.`))}
+$("#sugg").innerHTML=["Can we grow sales 20% with what we have?","Find the cheapest plan to hit 20%","Compare price, marketing and channel growth","What if we add a third shift?","How much growth can we support at most?","What's the risk on this plan?"].map(s=>`<button type="button">${esc(s)}</button>`).join("");
+
+/* ===================== EVENTS ===================== */
+document.addEventListener("click",e=>{
+  const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+  const st=e.target.closest("[data-strat]");if(st){S.strat=st.dataset.strat;run();return}
+  const p=e.target.closest("[data-preset]");if(p){S=PRESETS[p.dataset.preset](S);run();return}
+  const sg=e.target.closest("#sugg button");if(sg){send(sg.textContent);return}
+});
+const bindRange=(id,fn)=>$("#"+id).addEventListener("input",e=>{fn(+e.target.value);run()});
+bindRange("g",v=>S.G=v/100);bindRange("cm",v=>S.cm=v);bindRange("ops",v=>S.ops=v);bindRange("tech",v=>S.tech=v);
+["shift","line","ss2","tpl","pre"].forEach(id=>$("#"+id).addEventListener("change",e=>{S[id]=e.target.checked;run()}));
+$("#optBtn").addEventListener("click",()=>{const b=$("#optBtn");b.disabled=true;b.textContent="Searching…";setTimeout(()=>{const o=optimise(S.G,S.strat);const pick=o.best||o.bestAny;S={...pick.S};lastOpt=pick;run();$("#optNote").textContent=o.best?`Tested ${o.evaluated.toLocaleString("en-IN")} plans. This is the highest-EBITDA plan that hits the target at ≥95% service.`:`Tested ${o.evaluated.toLocaleString("en-IN")} plans. None hits the target; this one gets closest.`;b.disabled=false;b.textContent="Let the agent optimise"},30)});
+$("#pinBtn").addEventListener("click",()=>{pinned.push({n:`Pinned #${pinned.length+1}`,S:{...S}});if(pinned.length>3)pinned.shift();renderCompare()});
+$("#mcBtn").addEventListener("click",()=>{MC=monteCarlo(S);renderTop();renderMCChart()});
+$("#composer").addEventListener("submit",e=>{e.preventDefault();if(busy&&ctl){ctl.abort();return}send($("#q").value)});
+$("#q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#composer").requestSubmit()}});
+$("#engineBtn").addEventListener("click",()=>{if(!claudeOK){addMsg("a",md("Claude isn't available in this view, so I'm using the built-in analytics engine. It runs the same simulator and tools."));return}useClaude=!useClaude;engineLabel()});
+$("#fab").addEventListener("click",()=>go("agent"));
+const redraw=()=>renderCharts();
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",redraw)}catch(_){}
+new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+run();engineLabel();greet();
+(async()=>{try{if(!window.claude||!window.claude.use)return;const s=await window.claude.use("sample");if(!s)return;const lim=await s.limits().catch(()=>null);if(!lim||!lim.tools)return;sample=s;claudeOK=true;useClaude=true;engineLabel()}catch(_){}})();
+})();
+</script>
+
+</body></html>
